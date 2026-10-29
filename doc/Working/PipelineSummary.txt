@@ -1,0 +1,81 @@
+Version 1 - Current Pipeline
+
+1. Impossible data removal
+2. Preprocessing (here we branch for XGBoost vs NN):
+	A. XGBoost (No scaling, no categorical encoding)
+	B. NN (one-hot encoding & scaling done)
+3A. IForest (identify outliers from NN dataset; remove from both XGB & NN datasets)
+	OUTLIER_XGB_1 dataset created
+	OUTLIER_NN_2 dataset created
+4. Train-Test Split
+	TRAIN_CLEAN_XGB_3 created
+	TEST_CLEAN_XGB_4 created
+	TRAIN_CLEAN_NN_5 created
+	TEST_CLEAN_NN_6 created
+5. SMOTE Application (run separately on train datasets only)
+	TRAIN_SMOTED_XGB_7 created
+	TRAIN_SMOTED_NN_8 created
+6. QELM (on NN datasets 5,6 & 8 only)
+	TRAIN_CLEAN_QELM_9 created
+	TEST_CLEAN_QELM_10 created
+	TRAIN_SMOTED_QELM_11 created
+7. Model training & evaluation
+	a. XGBoost classical: Inputs -> Train on 3/7, evaluate on 4
+	b. NN classical: Inputs -> Train on 5/8, Evaluate on 6
+	c. XGBoost quantum: Inputs -> Train on 9/11, Evaluate on 10
+	d. NN quantum: Inputs -> Train on 9/11, Evaluate on 10
+	
+	
+	
+	
+Notes/Issues: 
+3A.  ** iForest introduces data leakage: It decides what a normal data point is. We can't use the test set for that.
+	We can leave outliers in the test set.
+4. Because scaling and iForest happened before the split, this allows data leakage doesn't it?
+	Scaling involves using the variance and mean of the whole dataset, including the test set.
+5. We are running 2 different versions of SMOTE on 2 different feature spaces (scaled vs unscaled).
+	This will mean we have completely different SMOTE data -> not an equal comparison
+
+
+
+	
+
+Version 2 - Alternate Pipeline that addressed the issues above?
+
+1. Impossible data removal
+2. Train-Test Split
+	RAW_TRAIN & RAW_TEST created (in memory only)
+3. IForest
+	Create a scaled version of RAW_TRAIN
+	Find outliers
+	OUTLIER_TRAIN_1 dataset created & saved
+	Remove outliers
+	CLEAN_TRAIN_1 created (in memory only)
+4. SMOTE-NC
+	Run on CLEAN_TRAIN_1
+	SMOTED_RAW_TRAIN created (in memory only)
+5. Preprocessing (here we branch for XGBoost vs NN):
+	A. XGBoost (No scaling, no categorical encoding)
+		TEST_XGB_2 created (from RAW_TEST)
+		CLEAN_TRAIN_XGB_3 created (from CLEAN_RAW_TRAIN)
+		SMOTED_TRAIN_XGB_4 created (from SMOTED_RAW_TRAIN)
+	B. NN
+		Perform one-hot encoding & scaling
+		Scaling done with train set only via fit()
+		Test sets get scaling applied via transform()
+		TEST_NN_5 created (from RAW_TEST)
+		CLEAN_TRAIN_NN_6 created (from CLEAN_RAW_TRAIN)
+		SMOTED_TRAIN_NN_7 created (from SMOTED_RAW_TRAIN)
+6. QELM (on NN datasets 5,6 & 7 only)
+	TEST_QELM_8 created
+	CLEAN_TRAIN_QELM_9 created
+	SMOTED_TRAIN_QELM_10 created
+7. Model training & evaluation
+	a. XGBoost classical: Inputs -> Train on 3/4, evaluate on 2
+	b. NN classical: Inputs -> Train on 6/7, Evaluate on 5
+	c. XGBoost quantum: Inputs -> Train on 9/10, Evaluate on 8
+	d. NN quantum: Inputs -> Train on 9/10, Evaluate on 8
+
+Notes:
+2. Do the Train-Test split before preprocessing (scaling) to avoid data leakage.
+4. SMOTE-NC is run once on the raw unencoded training data before preprocessing. Same synthetic data used among all models.
